@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__ZIIT_CODEX_PLUGIN_ROOT__/scripts/track-activity.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__ZIIT_CODEX_PLUGIN_ROOT__/scripts/track-activity.py"
+          }
+        ]
+      }
+    ]
+  }
+}

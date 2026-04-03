@@ -8,7 +8,7 @@ Ziit time tracking plugins for AI coding assistants. Track your coding time with
 |--------|----------|--------|
 | `ziit-claude-code` | Claude Code | ✅ Ready |
 | `ziit-opencode` | OpenCode | 🚧 Coming soon |
-| `ziit-codex` | Codex CLI | 🚧 Coming soon |
+| `ziit-codex` | Codex CLI | ✅ Ready |
 
 ## Installation
 
@@ -27,6 +27,38 @@ echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.confi
 ```
 
 Get your API key from your [Ziit dashboard settings](https://ziit.app/settings).
+
+### Codex CLI
+
+Codex CLI currently uses file-based hook installation rather than a marketplace command.
+
+1. Clone this repository:
+
+```bash
+git clone https://github.com/arcat0v0/ziit-extension-plugins.git
+cd ziit-extension-plugins
+```
+
+2. Install the Codex hooks:
+
+```bash
+./plugins/ziit-codex/scripts/install.sh
+```
+
+The installer will:
+
+- merge this plugin into `~/.codex/hooks.json`
+- enable `codex_hooks = true` in `~/.codex/config.toml`
+- create timestamped backups before changing existing Codex config files
+
+3. Configure your API key:
+
+```bash
+mkdir -p ~/.config/ziit
+echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.config/ziit/config.json
+```
+
+4. Restart Codex CLI so the new hooks are loaded.
 
 ## Plugin Management
 
@@ -47,12 +79,19 @@ claude plugin enable ziit-claude-code
 claude plugin uninstall ziit-claude-code
 ```
 
+Codex CLI uses file-based hook installation instead of a marketplace command. Manage it with:
+
+```bash
+./plugins/ziit-codex/scripts/install.sh
+./plugins/ziit-codex/scripts/uninstall.sh
+```
+
 ## How It Works
 
-The plugin uses Claude Code's hooks system to track coding activity:
+These plugins use each platform's native extension surface to send Ziit heartbeats:
 
-- **PostToolUse** (Edit/Write/MultiEdit): Captures file edits
-- **Stop**: Session completion tracking
+- **Claude Code**: `PostToolUse` for `Edit|Write|MultiEdit` plus `Stop`
+- **Codex CLI**: official Codex hooks with `PostToolUse` for `Bash` plus `Stop`
 
 Each heartbeat includes:
 - Timestamp
@@ -60,7 +99,7 @@ Each heartbeat includes:
 - Programming language (30+ languages supported)
 - File path
 - Git branch
-- Editor name ("Claude Code")
+- Editor name (for example `Claude Code` or `Codex CLI`)
 - Operating system
 
 ## Features
@@ -73,12 +112,16 @@ Each heartbeat includes:
 
 ## Logs
 
-Debug logs: `~/.config/ziit/claude-code.log`
+Debug logs:
+
+- Claude Code: `~/.config/ziit/claude-code.log`
+- Codex CLI: `~/.config/ziit/codex.log`
 
 ## Requirements
 
-- `jq` - JSON processor
-- `curl` - HTTP client
+- `bash`
+- `python3` for the Codex CLI plugin
+- `jq` and `curl` for the Claude Code plugin
 - `git` - For project/branch detection (optional)
 
 ## License
