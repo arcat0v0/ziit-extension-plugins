@@ -14,48 +14,16 @@ Ziit time tracking plugins for AI coding assistants. Track your coding time with
 
 ### Claude Code
 
-**Method 1: Add marketplace source (Recommended)**
-
 ```bash
 # Add the ziit marketplace
-claude plugin marketplace add github:arcat0v0/ziit-extension-plugins
+claude plugin marketplace add arcat0v0/ziit-extension-plugins
 
 # Install the plugin
 claude plugin install ziit-claude-code
-```
 
-**Method 2: Install from Git URL directly**
-
-```bash
-# Add as marketplace source
-claude plugin marketplace add https://github.com/arcat0v0/ziit-extension-plugins.git
-
-# Install
-claude plugin install ziit-claude-code@ziit-extension-plugins
-```
-
-**Method 3: Local development**
-
-```bash
-# Clone the repo
-git clone https://github.com/arcat0v0/ziit-extension-plugins.git
-
-# Load plugin for current session
-claude --plugin-dir ./ziit-extension-plugins/plugins/ziit-claude-code
-```
-
-### Configuration
-
-Create your Ziit config file:
-
-```bash
+# Configure your API key
 mkdir -p ~/.config/ziit
-cat > ~/.config/ziit/config.json << 'EOF'
-{
-  "apiKey": "your-ziit-api-key-uuid",
-  "baseUrl": "https://ziit.app"
-}
-EOF
+echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.config/ziit/config.json
 ```
 
 Get your API key from your [Ziit dashboard settings](https://ziit.app/settings).
