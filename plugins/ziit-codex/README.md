@@ -6,7 +6,17 @@ Track your Codex CLI coding activity with [Ziit](https://ziit.app), a self-hosta
 
 Codex CLI does not currently have a marketplace-style plugin installer, so this plugin ships with an install script that wires up Codex hooks for you.
 
-### 1. Configure your Ziit credentials
+### 1. One-command install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arcat0v0/ziit-extension-plugins/main/plugins/ziit-codex/install.sh | bash
+```
+
+The bootstrap installer downloads the plugin into `${XDG_DATA_HOME:-~/.local/share}/ziit/plugins/ziit-codex` and then runs the normal installer.
+
+If you prefer a local checkout, run `./scripts/install.sh` from this plugin directory instead.
+
+### 2. Configure your Ziit credentials
 
 Create `~/.config/ziit/config.json`:
 
@@ -17,15 +27,7 @@ Create `~/.config/ziit/config.json`:
 }
 ```
 
-### 2. Install the Codex hooks
-
-From this plugin directory, run:
-
-```bash
-./scripts/install.sh
-```
-
-That script:
+That installer:
 
 - merges this plugin into `~/.codex/hooks.json`
 - enables `codex_hooks = true` in `~/.codex/config.toml`

@@ -32,16 +32,26 @@ Get your API key from your [Ziit dashboard settings](https://ziit.app/settings).
 
 Codex CLI currently uses file-based hook installation rather than a marketplace command.
 
-1. Clone this repository:
+1. One-command install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arcat0v0/ziit-extension-plugins/main/plugins/ziit-codex/install.sh | bash
+```
+
+2. Configure your API key:
+
+```bash
+mkdir -p ~/.config/ziit
+echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.config/ziit/config.json
+```
+
+3. Restart Codex CLI so the new hooks are loaded.
+
+If you prefer a manual install flow, use a repository checkout:
 
 ```bash
 git clone https://github.com/arcat0v0/ziit-extension-plugins.git
 cd ziit-extension-plugins
-```
-
-2. Install the Codex hooks:
-
-```bash
 ./plugins/ziit-codex/scripts/install.sh
 ```
 
@@ -50,15 +60,6 @@ The installer will:
 - merge this plugin into `~/.codex/hooks.json`
 - enable `codex_hooks = true` in `~/.codex/config.toml`
 - create timestamped backups before changing existing Codex config files
-
-3. Configure your API key:
-
-```bash
-mkdir -p ~/.config/ziit
-echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.config/ziit/config.json
-```
-
-4. Restart Codex CLI so the new hooks are loaded.
 
 ## Plugin Management
 
@@ -82,6 +83,9 @@ claude plugin uninstall ziit-claude-code
 Codex CLI uses file-based hook installation instead of a marketplace command. Manage it with:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/arcat0v0/ziit-extension-plugins/main/plugins/ziit-codex/install.sh | bash
+
+# or, if you already checked out the repository:
 ./plugins/ziit-codex/scripts/install.sh
 ./plugins/ziit-codex/scripts/uninstall.sh
 ```
