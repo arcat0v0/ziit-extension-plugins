@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Reference repos (submodules or cloned for reference)
+Ziit/
+opencode-mem/
+opencode-notifier/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Config with secrets
+config.json

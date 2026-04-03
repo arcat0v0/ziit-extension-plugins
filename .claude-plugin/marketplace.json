@@ -1,0 +1,33 @@
+{
+  "name": "ziit-extension-plugins",
+  "metadata": {
+    "description": "Ziit time tracking plugins for AI coding assistants - track your Claude Code, OpenCode, and Codex usage"
+  },
+  "owner": {
+    "name": "Ziit Extension Plugins"
+  },
+  "plugins": [
+    {
+      "name": "ziit-claude-code",
+      "description": "Track your Claude Code coding time with Ziit - a self-hostable WakaTime alternative",
+      "version": "1.0.0",
+      "source": "./plugins/ziit-claude-code",
+      "category": "productivity",
+      "keywords": [
+        "time-tracking",
+        "ziit",
+        "wakatime",
+        "productivity",
+        "coding-stats"
+      ],
+      "tags": [
+        "productivity",
+        "metrics",
+        "time-tracking"
+      ],
+      "homepage": "https://github.com/your-username/ziit-extension-plugins",
+      "repository": "https://github.com/your-username/ziit-extension-plugins",
+      "license": "MIT"
+    }
+  ]
+}
