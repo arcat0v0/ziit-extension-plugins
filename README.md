@@ -18,7 +18,7 @@ Ziit time tracking plugins for AI coding assistants. Track your coding time with
 
 ```bash
 # Add the ziit marketplace
-claude plugin marketplace add github:your-username/ziit-extension-plugins
+claude plugin marketplace add github:arcat0v0/ziit-extension-plugins
 
 # Install the plugin
 claude plugin install ziit-claude-code
@@ -28,7 +28,7 @@ claude plugin install ziit-claude-code
 
 ```bash
 # Add as marketplace source
-claude plugin marketplace add https://github.com/your-username/ziit-extension-plugins.git
+claude plugin marketplace add https://github.com/arcat0v0/ziit-extension-plugins.git
 
 # Install
 claude plugin install ziit-claude-code@ziit-extension-plugins
@@ -38,7 +38,7 @@ claude plugin install ziit-claude-code@ziit-extension-plugins
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-username/ziit-extension-plugins.git
+git clone https://github.com/arcat0v0/ziit-extension-plugins.git
 
 # Load plugin for current session
 claude --plugin-dir ./ziit-extension-plugins/plugins/ziit-claude-code
