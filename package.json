@@ -1,0 +1,16 @@
+{
+  "name": "ziit-extension-plugins",
+  "private": true,
+  "description": "Ziit time tracking plugins for AI coding assistants",
+  "workspaces": [
+    "packages/*",
+    "plugins/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter './packages/*' --filter './plugins/*' build",
+    "publish:core": "pnpm --filter @arcat/ziit-core publish:npm",
+    "publish:pi": "pnpm --filter @arcat/ziit-pi publish:npm",
+    "publish:opencode": "pnpm --filter @arcat/ziit-opencode publish:npm",
+    "publish:all": "pnpm build && pnpm publish:core && pnpm publish:pi && pnpm publish:opencode"
+  }
+}

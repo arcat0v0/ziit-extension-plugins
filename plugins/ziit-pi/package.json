@@ -1,0 +1,63 @@
+{
+  "name": "@arcat/ziit-pi",
+  "version": "0.1.6",
+  "description": "Ziit time tracking plugin for pi (pi.dev)",
+  "type": "module",
+  "main": "dist/plugin.js",
+  "types": "dist/plugin.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/plugin.js",
+      "types": "./dist/plugin.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "publish:npm": "pnpm publish --registry https://registry.npmjs.org/ --access public --no-git-checks"
+  },
+  "keywords": [
+    "ziit",
+    "pi",
+    "pi.dev",
+    "pi-extension",
+    "time-tracking"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arcat0v0/ziit-extension-plugins.git",
+    "directory": "plugins/ziit-pi"
+  },
+  "homepage": "https://github.com/arcat0v0/ziit-extension-plugins/tree/main/plugins/ziit-pi",
+  "bugs": {
+    "url": "https://github.com/arcat0v0/ziit-extension-plugins/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@arcat/ziit-core": "^0.1.6"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@mariozechner/pi-coding-agent": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  },
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ]
+}

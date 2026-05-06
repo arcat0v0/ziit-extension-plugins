@@ -1,0 +1,59 @@
+{
+  "name": "@arcat/ziit-opencode",
+  "version": "0.1.6",
+  "description": "Ziit time tracking plugin for OpenCode",
+  "type": "module",
+  "main": "dist/plugin.js",
+  "types": "dist/plugin.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/plugin.js",
+      "types": "./dist/plugin.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "publish:npm": "pnpm publish --registry https://registry.npmjs.org/ --access public --no-git-checks"
+  },
+  "keywords": [
+    "ziit",
+    "opencode",
+    "opencode-plugin",
+    "time-tracking"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arcat0v0/ziit-extension-plugins.git",
+    "directory": "plugins/ziit-opencode"
+  },
+  "homepage": "https://github.com/arcat0v0/ziit-extension-plugins/tree/main/plugins/ziit-opencode",
+  "bugs": {
+    "url": "https://github.com/arcat0v0/ziit-extension-plugins/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@arcat/ziit-core": "^0.1.2",
+    "@opencode-ai/plugin": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.0.0"
+  },
+  "opencode": {
+    "type": "plugin",
+    "hooks": [
+      "event"
+    ]
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ]
+}
