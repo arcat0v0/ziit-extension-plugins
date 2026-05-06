@@ -153,7 +153,7 @@ send_heartbeat() {
     local http_code
     
     # Send request and capture both response and status code
-    response=$(curl -s -w "\n%{http_code}" \
+    response=$(curl -s --max-time 5 -w "\n%{http_code}" \
         -X POST \
         -H "Authorization: Bearer $API_KEY" \
         -H "Content-Type: application/json" \
@@ -212,7 +212,7 @@ sync_offline_heartbeats() {
     local response
     local http_code
     
-    response=$(curl -s -w "\n%{http_code}" \
+    response=$(curl -s --max-time 10 -w "\n%{http_code}" \
         -X POST \
         -H "Authorization: Bearer $API_KEY" \
         -H "Content-Type: application/json" \

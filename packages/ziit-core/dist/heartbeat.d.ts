@@ -14,6 +14,11 @@ export interface HeartbeatPayload {
 export declare function createHeartbeat(filePath: string, cwd: string, editorName: string): HeartbeatPayload;
 /**
  * Send a single heartbeat to the Ziit API.
- * On failure, queues the heartbeat to the offline file for later sync.
+ *
+ * IMPORTANT: This function is fire-and-forget. It returns immediately
+ * and performs the network request in the background so it never blocks
+ * the host agent's event loop.
+ *
+ * On failure, the heartbeat is queued to the offline file for later sync.
  */
-export declare function sendHeartbeat(config: ZiitConfig, payload: HeartbeatPayload, platformName: string): Promise<void>;
+export declare function sendHeartbeat(config: ZiitConfig, payload: HeartbeatPayload, platformName: string): void;

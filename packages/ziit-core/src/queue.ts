@@ -96,7 +96,7 @@ async function postJson(
 export async function enqueueOffline(
   payload: HeartbeatPayload,
   platform: string,
-  logger: (msg: string) => Promise<void>,
+  logger: (msg: string) => void | Promise<void>,
 ): Promise<void> {
   const queue = await loadOfflineQueue(platform);
   queue.push(payload);
@@ -113,7 +113,7 @@ export async function enqueueOffline(
 export async function syncOfflineQueue(
   config: ZiitConfig,
   platform: string,
-  logger: (msg: string) => Promise<void>,
+  logger: (msg: string) => void | Promise<void>,
 ): Promise<void> {
   const queue = await loadOfflineQueue(platform);
   if (queue.length === 0) return;

@@ -6,16 +6,20 @@ const LOG_DIR = resolve(homedir(), ".config", "ziit");
  * Create a logger function for a specific platform.
  * Writes timestamped messages to ~/.config/ziit/<platform>.log.
  * Errors are silently ignored to avoid breaking the host agent.
+ *
+ * Returns void (fire-and-forget) so it never blocks the caller.
  */
 export function createLogger(platform) {
-    return async (message) => {
-        try {
-            await mkdir(LOG_DIR, { recursive: true });
-            const timestamp = new Date().toISOString();
-            await appendFile(resolve(LOG_DIR, `${platform}.log`), `[${timestamp}] ${message}\n`, "utf-8");
-        }
-        catch {
-            // Silently ignore log write failures
-        }
+    return (message) => {
+        void (async () => {
+            try {
+                await mkdir(LOG_DIR, { recursive: true });
+                const timestamp = new Date().toISOString();
+                await appendFile(resolve(LOG_DIR, `${platform}.log`), `[${timestamp}] ${message}\n`, "utf-8");
+            }
+            catch {
+                // Silently ignore log write failures
+            }
+        })();
     };
 }

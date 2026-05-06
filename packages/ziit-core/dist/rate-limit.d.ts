@@ -1,6 +1,15 @@
 /**
- * Create a rate limiter with a per-key cooldown.
- * Returns a function that accepts a key and returns true if the key
- * should be allowed through (not rate-limited), false if within the cooldown.
+ * WakaTime-style rate limiter.
+ *
+ * - Default cooldown: 2 minutes (120_000 ms) for the same file.
+ * - isWrite=true (file saved): bypasses cooldown, always allowed.
+ * - File changed (different from last sent): bypasses cooldown, always allowed.
  */
-export declare function createRateLimiter(cooldownMs: number): (key: string) => boolean;
+export interface RateLimitResult {
+    allowed: boolean;
+    reason?: "cooldown" | "allowed";
+}
+export interface RateLimiter {
+    check(filePath: string, isWrite?: boolean): RateLimitResult;
+}
+export declare function createRateLimiter(cooldownMs: number): RateLimiter;

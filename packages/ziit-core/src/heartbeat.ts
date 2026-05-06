@@ -3,7 +3,7 @@ import type { ZiitConfig } from "./config.js";
 import { detectBranch, detectProject } from "./git.js";
 import { detectLanguage } from "./language.js";
 import { createLogger } from "./logger.js";
-import { enqueueOffline, syncOfflineQueue } from "./queue.js";
+import { enqueueOffline } from "./queue.js";
 
 export interface HeartbeatPayload {
   timestamp: string;
@@ -42,12 +42,16 @@ export function createHeartbeat(
   };
 }
 
+const FETCH_TIMEOUT_MS = 5_000;
+
 async function postJson(
   url: string,
   apiKey: string,
   payload: unknown,
 ): Promise<boolean> {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -55,7 +59,9 @@ async function postJson(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     return response.ok;
   } catch {
     return false;
@@ -64,28 +70,33 @@ async function postJson(
 
 /**
  * Send a single heartbeat to the Ziit API.
- * On failure, queues the heartbeat to the offline file for later sync.
+ *
+ * IMPORTANT: This function is fire-and-forget. It returns immediately
+ * and performs the network request in the background so it never blocks
+ * the host agent's event loop.
+ *
+ * On failure, the heartbeat is queued to the offline file for later sync.
  */
-export async function sendHeartbeat(
+export function sendHeartbeat(
   config: ZiitConfig,
   payload: HeartbeatPayload,
   platformName: string,
-): Promise<void> {
+): void {
   const logger = createLogger(platformName);
 
-  // Sync any previously queued heartbeats first
-  await syncOfflineQueue(config, platformName, logger);
+  // Fire-and-forget: do not await the network request
+  void (async () => {
+    const ok = await postJson(
+      `${config.baseUrl}/api/external/heartbeat`,
+      config.apiKey,
+      payload,
+    );
 
-  const ok = await postJson(
-    `${config.baseUrl}/api/external/heartbeat`,
-    config.apiKey,
-    payload,
-  );
-
-  if (ok) {
-    await logger(`Heartbeat sent for ${payload.file}`);
-  } else {
-    await enqueueOffline(payload, platformName, logger);
-    await logger(`Queued offline heartbeat for ${payload.file}`);
-  }
+    if (ok) {
+      void logger(`Heartbeat sent for ${payload.file}`);
+    } else {
+      await enqueueOffline(payload, platformName, logger);
+      void logger(`Queued offline heartbeat for ${payload.file}`);
+    }
+  })();
 }

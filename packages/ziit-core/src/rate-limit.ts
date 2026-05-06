@@ -1,20 +1,50 @@
 /**
- * Create a rate limiter with a per-key cooldown.
- * Returns a function that accepts a key and returns true if the key
- * should be allowed through (not rate-limited), false if within the cooldown.
+ * WakaTime-style rate limiter.
+ *
+ * - Default cooldown: 2 minutes (120_000 ms) for the same file.
+ * - isWrite=true (file saved): bypasses cooldown, always allowed.
+ * - File changed (different from last sent): bypasses cooldown, always allowed.
  */
-export function createRateLimiter(
-  cooldownMs: number,
-): (key: string) => boolean {
-  const lastSeen = new Map<string, number>();
+export interface RateLimitResult {
+  allowed: boolean;
+  reason?: "cooldown" | "allowed";
+}
 
-  return (key: string): boolean => {
-    const now = Date.now();
-    const previous = lastSeen.get(key);
-    if (typeof previous === "number" && now - previous < cooldownMs) {
-      return false;
-    }
-    lastSeen.set(key, now);
-    return true;
+export interface RateLimiter {
+  check(filePath: string, isWrite?: boolean): RateLimitResult;
+}
+
+export function createRateLimiter(cooldownMs: number): RateLimiter {
+  const lastSent = new Map<string, number>();
+  let lastFile = "";
+
+  return {
+    check(filePath: string, isWrite = false): RateLimitResult {
+      const now = Date.now();
+
+      // Always send on save/write
+      if (isWrite) {
+        lastSent.set(filePath, now);
+        lastFile = filePath;
+        return { allowed: true, reason: "allowed" };
+      }
+
+      // Always send when switching to a different file
+      if (filePath !== lastFile) {
+        lastSent.set(filePath, now);
+        lastFile = filePath;
+        return { allowed: true, reason: "allowed" };
+      }
+
+      // Same file: check cooldown
+      const previous = lastSent.get(filePath);
+      if (typeof previous === "number" && now - previous < cooldownMs) {
+        return { allowed: false, reason: "cooldown" };
+      }
+
+      lastSent.set(filePath, now);
+      lastFile = filePath;
+      return { allowed: true, reason: "allowed" };
+    },
   };
 }

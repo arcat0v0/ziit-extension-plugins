@@ -13,7 +13,7 @@ import {
 } from "@arcat/ziit-core";
 
 const EDITOR_NAME = "OpenCode";
-const MIN_SEND_INTERVAL_MS = 45_000;
+const MIN_SEND_INTERVAL_MS = 120_000; // 2 minutes — WakaTime standard
 const MAX_FILES_PER_EVENT = 20;
 
 const IGNORED_DIRS = new Set([
@@ -299,9 +299,14 @@ export const ZiitOpenCodePlugin: Plugin = async ({
         rememberSessionFiles(sessionID, files, nowSeconds);
 
         for (const filePath of files) {
-          if (!rateLimiter(filePath)) continue;
+          const limit = rateLimiter.check(filePath, false);
+          if (!limit.allowed) {
+            log(`Rate limited: ${filePath} (${limit.reason})`);
+            continue;
+          }
           const payload = createHeartbeat(filePath, cwd, EDITOR_NAME);
-          await sendHeartbeat(config, payload, "opencode");
+          // Fire-and-forget: never block OpenCode's event loop
+          sendHeartbeat(config, payload, "opencode");
         }
         return;
       }

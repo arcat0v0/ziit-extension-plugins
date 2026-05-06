@@ -1,6 +1,6 @@
 {
   "name": "@arcat/ziit-pi",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Ziit time tracking plugin for pi (pi.dev)",
   "type": "module",
   "main": "dist/plugin.js",
@@ -37,7 +37,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@arcat/ziit-core": "^0.1.6"
+    "@arcat/ziit-core": "workspace:^"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*"

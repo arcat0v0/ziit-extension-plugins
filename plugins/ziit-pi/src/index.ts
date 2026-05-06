@@ -10,7 +10,7 @@ import {
 } from "@arcat/ziit-core";
 
 const EDITOR_NAME = "Pi";
-const MIN_SEND_INTERVAL_MS = 45_000;
+const MIN_SEND_INTERVAL_MS = 120_000; // 2 minutes — WakaTime standard
 const TOOL_CALL_TTL_MS = 300_000; // 5 minutes
 
 const log = createLogger("pi");
@@ -20,8 +20,13 @@ const log = createLogger("pi");
  *
  * Subscribes to pi's tool events to capture file paths from `read`,
  * `write`, and `edit` tool calls, constructs heartbeat payloads via
- * `ziit-core`, and sends them to the Ziit API. Uses a two-phase
- * pattern: capture on `tool_call`, send on successful `tool_result`.
+ * `ziit-core`, and sends them to the Ziit API.
+ *
+ * WakaTime-style logic:
+ * - 2-minute rate limit per file
+ * - File switch always sends immediately
+ * - Write/save operations bypass rate limit
+ * - All network is fire-and-forget (never blocks pi)
  */
 export default function ziitPi(pi: ExtensionAPI): void {
   let cwd = process.cwd();
@@ -61,15 +66,16 @@ export default function ziitPi(pi: ExtensionAPI): void {
     // Lazy config load — avoids blocking pi startup if config is missing
     if (!config) config = await loadConfig();
     if (!config) {
-      await log("Config not found — heartbeats disabled");
+      log("Config not found — heartbeats disabled");
       return;
     }
-    await syncOfflineQueue(config, "pi", log);
+    // Sync offline queue on session start (not on every heartbeat)
+    void syncOfflineQueue(config, "pi", log);
   });
 
   pi.on("session_shutdown", async () => {
     if (!config) return;
-    await syncOfflineQueue(config, "pi", log);
+    void syncOfflineQueue(config, "pi", log);
   });
 
   // ─── Tool call: capture file path ──────────────────────
@@ -87,9 +93,7 @@ export default function ziitPi(pi: ExtensionAPI): void {
 
     const path = (event.input as Record<string, unknown> | undefined)?.path;
     if (!path || typeof path !== "string") {
-      await log(
-        `Skipping heartbeat: missing or invalid path in ${event.toolName} tool_call`,
-      );
+      log(`Skipping heartbeat: missing or invalid path in ${event.toolName} tool_call`);
       return;
     }
 
@@ -116,17 +120,23 @@ export default function ziitPi(pi: ExtensionAPI): void {
 
     const filePath = toolCallPaths.get(event.toolCallId);
     if (!filePath) {
-      await log(
+      log(
         `Skipping heartbeat: no path captured for ${event.toolName} tool_result (toolCallId: ${event.toolCallId})`,
       );
       return;
     }
     clearToolCall(event.toolCallId);
 
-    // Rate limit
-    if (!rateLimiter(filePath)) return;
+    // WakaTime-style rate limiting
+    const isWrite = event.toolName === "write" || event.toolName === "edit";
+    const limit = rateLimiter.check(filePath, isWrite);
+    if (!limit.allowed) {
+      log(`Rate limited: ${filePath} (${limit.reason})`);
+      return;
+    }
 
     const payload = createHeartbeat(filePath, cwd, EDITOR_NAME);
-    await sendHeartbeat(config, payload, "pi");
+    // Fire-and-forget: never block pi's event loop
+    sendHeartbeat(config, payload, "pi");
   });
 }
