@@ -3,7 +3,7 @@
   "name": "ziit-claude-code",
   "displayName": "Ziit Time Tracker",
   "description": "Track Claude Code activity with Ziit, a self-hostable WakaTime alternative",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": {
     "name": "ziit-extension-plugins"
   },
@@ -16,6 +16,5 @@
     "wakatime",
     "productivity",
     "coding-stats"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }
