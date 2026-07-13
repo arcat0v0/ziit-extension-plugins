@@ -1,0 +1,20 @@
+{
+  "name": "ziit-extension-plugins",
+  "interface": {
+    "displayName": "Ziit Extension Plugins"
+  },
+  "plugins": [
+    {
+      "name": "ziit-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/ziit-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

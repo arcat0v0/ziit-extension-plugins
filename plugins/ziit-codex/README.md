@@ -4,17 +4,19 @@ Track your Codex CLI coding activity with [Ziit](https://ziit.app), a self-hosta
 
 ## Installation
 
-Codex CLI does not currently have a marketplace-style plugin installer, so this plugin ships with an install script that wires up Codex hooks for you.
+### Native plugin
 
-### 1. One-command install
+```bash
+codex plugin marketplace add arcat0v0/ziit-extension-plugins
+```
+
+Install `ziit-codex` from the Codex plugin browser, then review and trust the bundled hooks with `/hooks`. Restart the session after installation or upgrades.
+
+For Codex releases without plugin support, the legacy installer remains available:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/arcat0v0/ziit-extension-plugins/main/plugins/ziit-codex/install.sh | bash
 ```
-
-The bootstrap installer downloads the plugin into `${XDG_DATA_HOME:-~/.local/share}/ziit/plugins/ziit-codex` and then runs the normal installer.
-
-If you prefer a local checkout, run `./scripts/install.sh` from this plugin directory instead.
 
 ### 2. Configure your Ziit credentials
 
@@ -27,22 +29,15 @@ Create `~/.config/ziit/config.json`:
 }
 ```
 
-That installer:
-
-- merges this plugin into `~/.codex/hooks.json`
-- enables `codex_hooks = true` in `~/.codex/config.toml`
-- keeps timestamped backups before it changes existing files
-
-### 3. Restart Codex CLI
-
-Restart Codex CLI so the updated hooks and config are loaded.
+The legacy installer merges hooks into `~/.codex/hooks.json`, enables `[features].hooks`, and preserves timestamped backups. Native plugin installs keep lifecycle hooks inside the plugin bundle.
 
 ## How It Works
 
-Codex CLI exposes official hooks, but today `PostToolUse` only emits `Bash`. This plugin therefore uses two signals:
+Codex exposes both shell and direct edit events:
 
-- **PostToolUse (Bash)**: extracts file paths from the Bash command and, if needed, falls back to recently modified files
-- **Stop**: reuses session state to flush the last touched files and sync any queued offline heartbeats
+- **PostToolUse (`apply_patch`)**: extracts paths directly from the patch command
+- **PostToolUse (`Bash`)**: extracts command paths and falls back to recently modified files
+- **Stop**: flushes recent session files and queued offline heartbeats
 
 Each heartbeat includes:
 
@@ -66,12 +61,9 @@ Each heartbeat includes:
 
 ```text
 plugins/ziit-codex/
-├── hooks/
-│   └── hooks.template.json
-├── scripts/
-│   ├── install.sh
-│   ├── track-activity.py
-│   └── uninstall.sh
+├── .codex-plugin/plugin.json
+├── hooks/hooks.json
+├── scripts/track-activity.py
 └── README.md
 ```
 
@@ -87,19 +79,13 @@ Offline heartbeats are stored in `~/.config/ziit/offline_codex_heartbeats.json`.
 - `bash`
 - `git` (optional, for project name and branch detection)
 
-## Uninstall
+## Legacy uninstall
 
 ```bash
 ./scripts/uninstall.sh
 ```
 
-This removes the hook commands from `~/.codex/hooks.json`. If you no longer use any Codex hooks, remove `codex_hooks = true` from `~/.codex/config.toml` manually.
-
-## Limitations
-
-- Codex hooks are currently experimental
-- `PostToolUse` only emits `Bash`, not direct edit/write tool events
-- When a Bash command does not contain an obvious file path, the plugin falls back to recently changed files in the working tree
+Native installs are removed from the Codex plugin browser. Legacy installs remove their entries from `~/.codex/hooks.json`.
 
 ## License
 

@@ -1,0 +1,32 @@
+{
+  "name": "ziit-codex",
+  "version": "1.0.0",
+  "description": "Track Codex coding activity with Ziit, a self-hostable WakaTime alternative",
+  "author": {
+    "name": "ziit-extension-plugins",
+    "url": "https://github.com/arcat0v0/ziit-extension-plugins"
+  },
+  "homepage": "https://github.com/arcat0v0/ziit-extension-plugins/tree/main/plugins/ziit-codex",
+  "repository": "https://github.com/arcat0v0/ziit-extension-plugins",
+  "license": "MIT",
+  "keywords": [
+    "time-tracking",
+    "ziit",
+    "wakatime",
+    "productivity",
+    "coding-stats"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "Ziit Time Tracker",
+    "shortDescription": "Track Codex coding activity in Ziit",
+    "longDescription": "Send file activity heartbeats from Codex to a self-hosted or hosted Ziit instance.",
+    "developerName": "Ziit Extension Plugins",
+    "category": "Productivity",
+    "capabilities": [
+      "Hooks"
+    ],
+    "websiteURL": "https://ziit.app",
+    "brandColor": "#10A37F"
+  }
+}

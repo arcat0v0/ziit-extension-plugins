@@ -6,7 +6,7 @@ export interface HeartbeatPayload {
     editor: string;
     os: string;
     file: string;
-    branch: string | null;
+    branch?: string;
 }
 /**
  * Construct a heartbeat payload with all metadata fields populated.

@@ -35,8 +35,12 @@ Run `/reload-plugins` in Claude Code or restart the session.
 
 The plugin uses Claude Code's hooks system to track coding activity:
 
-- **PostToolUse (Edit/Write/MultiEdit)**: Captures file edits and sends heartbeats
-- **Stop**: Finalizes session tracking
+- **SessionStart**: initializes per-session activity state
+- **UserPromptSubmit**: starts an active coding turn
+- **PostToolUse / PostToolUseFailure**: records all successful and failed tool activity
+- **Stop / SessionEnd**: closes the active interval and flushes queued heartbeats
+
+While a turn is active, the plugin fills long gaps with one-minute heartbeats. The event coverage and cadence follow WakaTime's Claude Code plugin, while the interval fill adapts that model to Ziit’s heartbeat API without counting idle time between completed turns.
 
 Each heartbeat includes:
 - Timestamp
@@ -67,9 +71,8 @@ Logs are written to `~/.config/ziit/claude-code.log` for debugging.
 
 ## Requirements
 
-- `jq` - JSON processor (usually pre-installed on most systems)
-- `curl` - HTTP client (usually pre-installed)
-- `git` - For project/branch detection (optional)
+- Node.js 20 or newer
+- `git` for project and branch detection (optional)
 
 ## License
 

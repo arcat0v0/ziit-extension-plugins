@@ -6,10 +6,10 @@ Ziit time tracking plugins for AI coding assistants. Track your coding time with
 
 | Plugin | Platform | Status |
 |--------|----------|--------|
-| `ziit-claude-code` | Claude Code | ✅ Ready |
-| `ziit-opencode` | OpenCode | ✅ Ready |
-| `ziit-codex` | Codex CLI | ✅ Ready |
-| `ziit-pi` | pi (pi.dev) | ✅ Ready |
+| `ziit-claude-code` | Claude Code | Ready |
+| `ziit-codex` | Codex | Ready |
+| `ziit-pi` | Pi / Oh My Pi | Ready |
+| `ziit-opencode` | OpenCode | Ready |
 
 ## Installation
 
@@ -29,38 +29,24 @@ echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.confi
 
 Get your API key from your [Ziit dashboard settings](https://ziit.app/settings).
 
-### Codex CLI
+### Codex
 
-Codex CLI currently uses file-based hook installation rather than a marketplace command.
+```bash
+codex plugin marketplace add arcat0v0/ziit-extension-plugins
+```
 
-1. One-command install:
+Install `ziit-codex` from the Codex plugin browser, review and trust its hooks with `/hooks`, then restart the session. The legacy standalone installer remains available for older Codex releases:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/arcat0v0/ziit-extension-plugins/main/plugins/ziit-codex/install.sh | bash
 ```
 
-2. Configure your API key:
+Configure your API key:
 
 ```bash
 mkdir -p ~/.config/ziit
 echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.config/ziit/config.json
 ```
-
-3. Restart Codex CLI so the new hooks are loaded.
-
-If you prefer a manual install flow, use a repository checkout:
-
-```bash
-git clone https://github.com/arcat0v0/ziit-extension-plugins.git
-cd ziit-extension-plugins
-./plugins/ziit-codex/scripts/install.sh
-```
-
-The installer will:
-
-- merge this plugin into `~/.codex/hooks.json`
-- enable `codex_hooks = true` in `~/.codex/config.toml`
-- create timestamped backups before changing existing Codex config files
 
 ### OpenCode
 
@@ -84,19 +70,19 @@ echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.confi
 
 Restart OpenCode so the plugin is loaded.
 
-### pi (pi.dev)
+### Pi
 
 ```bash
-# Install the plugin
 pi install npm:@arcat/ziit-pi
-
-# Configure your API key
-mkdir -p ~/.config/ziit
-echo '{"apiKey": "your-ziit-api-key", "baseUrl": "https://ziit.app"}' > ~/.config/ziit/config.json
-
-# Reload extensions
-/reload
 ```
+
+### Oh My Pi
+
+```bash
+omp plugin install @arcat/ziit-pi
+```
+
+Both hosts read `~/.config/ziit/config.json`. Run `/reload` or restart the agent after installation.
 
 ### OpenCode (local development)
 
@@ -141,14 +127,11 @@ claude plugin enable ziit-claude-code
 claude plugin uninstall ziit-claude-code
 ```
 
-### Codex CLI
+### Codex
 
-Codex CLI uses file-based hook installation instead of a marketplace command. Manage it with:
+Manage the native plugin from the Codex plugin browser. Use `/hooks` to review changed hook definitions after upgrades. For legacy file-based installs, use:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/arcat0v0/ziit-extension-plugins/main/plugins/ziit-codex/install.sh | bash
-
-# or, if you already checked out the repository:
 ./plugins/ziit-codex/scripts/install.sh
 ./plugins/ziit-codex/scripts/uninstall.sh
 ```
@@ -164,9 +147,10 @@ OpenCode uses plugin configuration in `opencode.json`. To remove the plugin:
 
 These plugins use each platform's native extension surface to send Ziit heartbeats:
 
-- **Claude Code**: `PostToolUse` for `Edit|Write|MultiEdit` plus `Stop`
-- **Codex CLI**: official Codex hooks with `PostToolUse` for `Bash` plus `Stop`
-- **OpenCode**: native plugin `event` hook handling `message.part.updated`, `session.idle`, and `session.deleted`
+- **Claude Code**: WakaTime-aligned activity hooks for prompts, tool boundaries, compaction, subagents, turn completion, and session end
+- **Codex**: native plugin hooks for `apply_patch` and `Bash` plus `Stop`
+- **Pi / Oh My Pi**: native extension events for `read`, `write`, and `edit`
+- **OpenCode**: native plugin events for `message.part.updated`, `session.idle`, and `session.deleted`
 
 Each heartbeat includes:
 - Timestamp
@@ -179,11 +163,11 @@ Each heartbeat includes:
 
 ## Features
 
-- ✅ Automatic tracking - no manual intervention
-- ✅ Offline support - heartbeats queued and synced later
-- ✅ Git integration - detects project name and branch
-- ✅ Language detection - 30+ programming languages
-- ✅ Batch sync - efficient API usage
+- Automatic tracking with no manual intervention
+- Offline queue and batch retry
+- Git-aware project and branch detection
+- Language detection for common source files
+- One-minute Claude activity sampling within active turns
 
 ## Logs
 
@@ -195,11 +179,10 @@ Debug logs:
 
 ## Requirements
 
-- `bash`
-- `python3` for the Codex CLI plugin
-- `jq` and `curl` for the Claude Code plugin
-- `Node.js` for the OpenCode plugin (for building from source)
-- `git` - For project/branch detection (optional)
+- Node.js 20 or newer for Claude Code hooks
+- Python 3 for Codex hooks
+- Node.js for building the OpenCode and Pi packages
+- `git` for project and branch detection (optional)
 
 ## License
 

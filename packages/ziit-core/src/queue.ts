@@ -32,7 +32,15 @@ function parseHeartbeat(obj: Record<string, unknown>): HeartbeatPayload | null {
     return null;
   }
 
-  return { timestamp, project, language, editor, os: osValue, file, branch };
+  return {
+    timestamp,
+    project,
+    language,
+    editor,
+    os: osValue,
+    file,
+    ...(branch ? { branch } : {}),
+  };
 }
 
 /**

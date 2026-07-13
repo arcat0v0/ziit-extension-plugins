@@ -84,21 +84,21 @@ match = section_pattern.search(content)
 
 if match:
     section = match.group(0)
-    if re.search(r"(?m)^codex_hooks\s*=\s*(true|false)\s*$", section):
+    if re.search(r"(?m)^(?:hooks|codex_hooks)\s*=\s*(true|false)\s*$", section):
         section = re.sub(
-            r"(?m)^codex_hooks\s*=\s*(true|false)\s*$",
-            "codex_hooks = true",
+            r"(?m)^(?:hooks|codex_hooks)\s*=\s*(true|false)\s*$",
+            "hooks = true",
             section,
             count=1,
         )
     else:
-        section = section.rstrip() + "\ncodex_hooks = true\n"
+        section = section.rstrip() + "\nhooks = true\n"
     updated = content[: match.start()] + section + content[match.end() :]
 else:
     updated = content.rstrip()
     if updated:
         updated += "\n\n"
-    updated += "[features]\ncodex_hooks = true\n"
+    updated += "[features]\nhooks = true\n"
 
 config_path.write_text(updated if updated.endswith("\n") else updated + "\n", encoding="utf-8")
 PY

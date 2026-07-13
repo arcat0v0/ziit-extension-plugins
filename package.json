@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "pnpm --filter './packages/*' --filter './plugins/*' build",
+    "test:claude": "node plugins/ziit-claude-code/scripts/test-activity.mjs",
     "publish:core": "pnpm --filter @arcat/ziit-core publish:npm",
     "publish:pi": "pnpm --filter @arcat/ziit-pi publish:npm",
     "publish:opencode": "pnpm --filter @arcat/ziit-opencode publish:npm",

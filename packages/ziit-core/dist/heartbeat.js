@@ -17,6 +17,7 @@ function detectOs() {
  * Construct a heartbeat payload with all metadata fields populated.
  */
 export function createHeartbeat(filePath, cwd, editorName) {
+    const branch = detectBranch(cwd);
     return {
         timestamp: new Date().toISOString(),
         project: detectProject(cwd),
@@ -24,10 +25,10 @@ export function createHeartbeat(filePath, cwd, editorName) {
         editor: editorName,
         os: detectOs(),
         file: filePath,
-        branch: detectBranch(cwd),
+        ...(branch ? { branch } : {}),
     };
 }
-const FETCH_TIMEOUT_MS = 5_000;
+const FETCH_TIMEOUT_MS = 5000;
 async function postJson(url, apiKey, payload) {
     try {
         const controller = new AbortController();

@@ -1,7 +1,7 @@
 {
   "name": "@arcat/ziit-pi",
-  "version": "0.1.7",
-  "description": "Ziit time tracking plugin for pi (pi.dev)",
+  "version": "0.2.0",
+  "description": "Ziit time tracking extension for Pi and Oh My Pi",
   "type": "module",
   "main": "dist/plugin.js",
   "types": "dist/plugin.d.ts",
@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/plugin.js",
       "types": "./dist/plugin.d.ts"
+    },
+    "./omp": {
+      "import": "./dist/omp.js",
+      "types": "./dist/omp.d.ts"
     }
   },
   "scripts": {
@@ -21,6 +25,8 @@
     "pi",
     "pi.dev",
     "pi-extension",
+    "oh-my-pi",
+    "omp-extension",
     "time-tracking"
   ],
   "license": "MIT",
@@ -39,17 +45,14 @@
   "dependencies": {
     "@arcat/ziit-core": "workspace:^"
   },
-  "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "*"
-  },
-  "peerDependenciesMeta": {
-    "@mariozechner/pi-coding-agent": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.0.0"
+  },
+  "omp": {
+    "extensions": [
+      "./dist/omp.js"
+    ]
   },
   "pi": {
     "extensions": [

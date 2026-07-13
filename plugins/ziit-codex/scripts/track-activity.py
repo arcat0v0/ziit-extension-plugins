@@ -418,15 +418,18 @@ def recent_git_files(cwd: Path, now: float, window_seconds: int) -> list[Path]:
 
 
 def heartbeat_payload(file_path: Path, cwd: Path) -> dict[str, Any]:
-    return {
+    branch = detect_branch(cwd)
+    payload = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
         "project": detect_project(cwd),
         "language": detect_language(file_path),
         "editor": EDITOR_NAME,
         "os": detect_os(),
         "file": str(file_path),
-        "branch": detect_branch(cwd) or None,
     }
+    if branch:
+        payload["branch"] = branch
+    return payload
 
 
 def load_offline_queue() -> list[dict[str, Any]]:
@@ -504,9 +507,9 @@ def collect_files(
         command = str(tool_input.get("command", ""))
 
     files: list[Path] = []
-    if hook_name == "PostToolUse" and tool_name == "Bash" and command:
+    if hook_name == "PostToolUse" and tool_name in {"Bash", "apply_patch"} and command:
         files = extract_files_from_command(command, cwd)
-        if not files:
+        if not files and tool_name == "Bash":
             files = recent_changed_files(cwd, RECENT_FILE_WINDOW_SECONDS)
     elif hook_name == "Stop":
         files = get_recent_session_files(state, session_id)

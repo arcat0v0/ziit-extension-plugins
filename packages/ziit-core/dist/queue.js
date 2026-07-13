@@ -21,7 +21,15 @@ function parseHeartbeat(obj) {
     if (!timestamp || !project || !language || !editor || !osValue || !file) {
         return null;
     }
-    return { timestamp, project, language, editor, os: osValue, file, branch };
+    return {
+        timestamp,
+        project,
+        language,
+        editor,
+        os: osValue,
+        file,
+        ...(branch ? { branch } : {}),
+    };
 }
 /**
  * Read the offline heartbeat queue from disk.

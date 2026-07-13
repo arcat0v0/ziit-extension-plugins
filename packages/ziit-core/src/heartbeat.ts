@@ -12,7 +12,7 @@ export interface HeartbeatPayload {
   editor: string;
   os: string;
   file: string;
-  branch: string | null;
+  branch?: string;
 }
 
 function detectOs(): string {
@@ -31,6 +31,7 @@ export function createHeartbeat(
   cwd: string,
   editorName: string,
 ): HeartbeatPayload {
+  const branch = detectBranch(cwd);
   return {
     timestamp: new Date().toISOString(),
     project: detectProject(cwd),
@@ -38,7 +39,7 @@ export function createHeartbeat(
     editor: editorName,
     os: detectOs(),
     file: filePath,
-    branch: detectBranch(cwd),
+    ...(branch ? { branch } : {}),
   };
 }
 

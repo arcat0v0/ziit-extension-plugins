@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__ZIIT_CODEX_PLUGIN_ROOT__/scripts/track-activity.py",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/track-activity.py\"",
             "timeout": 15,
             "statusMessage": "Recording Ziit activity"
           }
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__ZIIT_CODEX_PLUGIN_ROOT__/scripts/track-activity.py",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/track-activity.py\"",
             "timeout": 15
           }
         ]

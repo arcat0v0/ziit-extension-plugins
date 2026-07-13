@@ -1,13 +1,12 @@
-# Ziit Time Tracker for pi
+# Ziit Time Tracker for Pi and Oh My Pi
 
-Track your pi coding activity with [Ziit](https://ziit.app), a self-hostable alternative to WakaTime.
+Track Pi or Oh My Pi coding activity with [Ziit](https://ziit.app), a self-hostable alternative to WakaTime.
 
 ## Installation
 
-### 1. Install via npm
-
 ```bash
 pi install npm:@arcat/ziit-pi
+omp plugin install @arcat/ziit-pi
 ```
 
 ### 2. Configure your Ziit credentials
@@ -23,19 +22,18 @@ Create `~/.config/ziit/config.json`:
 
 Get your API key from your [Ziit dashboard settings](https://ziit.app/settings).
 
-### 3. Restart pi
+### 3. Reload the extension
 
-Restart pi or run `/reload` for the extension to take effect.
+Restart the host or run `/reload`.
 
 ## How It Works
 
-This plugin uses pi's native extension system to track coding activity:
+The package exposes native manifests and typed entry points for both hosts:
 
-- **`tool_call`** (`read`, `write`, `edit`): captures the file path from pi's tool event parameters
-- **`tool_result`**: sends a heartbeat on successful tool execution (skipped on `isError`)
-- **`session_start`**: syncs any queued offline heartbeats from previous sessions
-- **`session_shutdown`**: drains remaining offline heartbeats
-- **`resources_discover`**: captures the working directory for git project/branch detection
+- **`tool_call`** (`read`, `write`, `edit`) captures the file path
+- **`tool_result`** sends a heartbeat only after success
+- **`session_start`** captures `ctx.cwd` and syncs queued heartbeats
+- **`session_shutdown`** clears pending timers and syncs the queue
 
 Each heartbeat includes:
 
@@ -44,35 +42,31 @@ Each heartbeat includes:
 - programming language (detected from file extension)
 - file path
 - git branch
-- editor (`Pi`)
+- editor (`Pi` or `Oh My Pi`)
 - operating system
 
 ## Features
 
-- **Direct path access** — pi's tool events expose `event.input.path` directly; no text-parsing heuristics needed
-- **Error-aware** — heartbeats are only sent for successful tool executions (`!event.isError`)
-- **Offline queue** — heartbeats are queued to `~/.config/ziit/offline_pi_heartbeats.json` when Ziit is unreachable
-- **Rate limiting** — 45-second cooldown per file to avoid API flooding
-- **TTL cleanup** — orphaned tool-call entries expire after 5 minutes to prevent memory leaks
+- **Direct path access**: tool events expose `event.input.path`
+- **Error-aware**: failed tool executions do not send heartbeats
+- **Offline queue**: host-specific queues persist under `~/.config/ziit`
+- **Rate limiting**: two-minute per-file cooldown with write bypass
+- **TTL cleanup**: orphaned tool-call entries expire after five minutes
 
 ## Logs
 
-Debug logs are written to `~/.config/ziit/pi.log`.
-
-Offline heartbeats are stored in `~/.config/ziit/offline_pi_heartbeats.json`.
+Pi writes `~/.config/ziit/pi.log`; Oh My Pi writes `~/.config/ziit/omp.log`.
 
 ## Requirements
 
-- pi (pi.dev) with extension support
-- `git` (optional, for project name and branch detection)
+- Pi `0.80.6` or newer, or Oh My Pi `16.4.8` or newer
+- `git` is optional for project and branch detection
 
 ## Uninstall
 
 ```bash
-# Remove the extension
-rm -rf ~/.pi/agent/extensions/node_modules/@arcat/ziit-pi
-
-# Restart pi
+pi uninstall @arcat/ziit-pi
+omp plugin uninstall @arcat/ziit-pi
 ```
 
 ## License

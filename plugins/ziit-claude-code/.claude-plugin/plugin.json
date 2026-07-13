@@ -1,11 +1,13 @@
 {
-  "name": "ziit-time-tracker",
-  "description": "Track your Claude Code coding time with Ziit - a self-hostable WakaTime alternative",
-  "version": "1.0.0",
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "ziit-claude-code",
+  "displayName": "Ziit Time Tracker",
+  "description": "Track Claude Code activity with Ziit, a self-hostable WakaTime alternative",
+  "version": "1.2.0",
   "author": {
     "name": "ziit-extension-plugins"
   },
-  "homepage": "https://github.com/arcat0v0/ziit-extension-plugins",
+  "homepage": "https://github.com/arcat0v0/ziit-extension-plugins/tree/main/plugins/ziit-claude-code",
   "repository": "https://github.com/arcat0v0/ziit-extension-plugins",
   "license": "MIT",
   "keywords": [
@@ -14,5 +16,6 @@
     "wakatime",
     "productivity",
     "coding-stats"
-  ]
+  ],
+  "hooks": "./hooks/hooks.json"
 }

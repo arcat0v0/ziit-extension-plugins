@@ -1,15 +1,14 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-/**
- * Pi extension for Ziit time tracking.
- *
- * Subscribes to pi's tool events to capture file paths from `read`,
- * `write`, and `edit` tool calls, constructs heartbeat payloads via
- * `ziit-core`, and sends them to the Ziit API.
- *
- * WakaTime-style logic:
- * - 2-minute rate limit per file
- * - File switch always sends immediately
- * - Write/save operations bypass rate limit
- * - All network is fire-and-forget (never blocks pi)
- */
-export default function ziitPi(pi: ExtensionAPI): void;
+export interface ZiitExtensionAPI {
+    on(event: "session_start", handler: (event: unknown, context: {
+        cwd: string;
+    }) => void | Promise<void>): void;
+    on(event: "session_shutdown", handler: () => void | Promise<void>): void;
+    on(event: "tool_call" | "tool_result", handler: (event: {
+        toolName: string;
+        toolCallId: string;
+        input?: Record<string, unknown>;
+        isError?: boolean;
+    }) => void | Promise<void>): void;
+}
+export declare function createZiitExtension(pi: ZiitExtensionAPI, editorName: string, platformName: string): void;
+export default function ziitPi(pi: ZiitExtensionAPI): void;
