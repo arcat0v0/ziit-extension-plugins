@@ -12,6 +12,6 @@
     "publish:core": "pnpm --filter @arcat/ziit-core publish:npm",
     "publish:pi": "pnpm --filter @arcat/ziit-pi publish:npm",
     "publish:opencode": "pnpm --filter @arcat/ziit-opencode publish:npm",
-    "publish:all": "pnpm build && pnpm publish:core && pnpm publish:pi && pnpm publish:opencode"
+    "publish:all": "pnpm build && pnpm test:claude && pnpm publish:core && pnpm publish:pi"
   }
 }
