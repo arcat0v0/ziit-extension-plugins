@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 const OFFLINE_DIR = resolve(homedir(), ".config", "ziit");
+const FETCH_TIMEOUT_MS = 5000;
 function getOfflineFile(platform) {
     return resolve(OFFLINE_DIR, `offline_${platform}_heartbeats.json`);
 }
@@ -58,6 +59,8 @@ async function saveOfflineQueue(platform, queue) {
     await writeFile(getOfflineFile(platform), JSON.stringify(queue, null, 2), "utf-8");
 }
 async function postJson(url, apiKey, payload) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
         const response = await fetch(url, {
             method: "POST",
@@ -66,11 +69,15 @@ async function postJson(url, apiKey, payload) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
+            signal: controller.signal,
         });
         return response.ok;
     }
     catch {
         return false;
+    }
+    finally {
+        clearTimeout(timeout);
     }
 }
 /**

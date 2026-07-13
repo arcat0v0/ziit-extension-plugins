@@ -1,6 +1,6 @@
 {
   "name": "ziit-codex",
-  "version": "1.0.0",
+  "version": "1.0.0+codex.20260713142459",
   "description": "Track Codex coding activity with Ziit, a self-hostable WakaTime alternative",
   "author": {
     "name": "ziit-extension-plugins",
@@ -16,7 +16,6 @@
     "productivity",
     "coding-stats"
   ],
-  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Ziit Time Tracker",
     "shortDescription": "Track Codex coding activity in Ziit",
@@ -27,6 +26,9 @@
       "Hooks"
     ],
     "websiteURL": "https://ziit.app",
+    "defaultPrompt": [
+      "Show me how Ziit tracks this Codex session."
+    ],
     "brandColor": "#10A37F"
   }
 }

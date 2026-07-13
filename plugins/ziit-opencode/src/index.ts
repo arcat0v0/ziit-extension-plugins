@@ -316,7 +316,8 @@ export const ZiitOpenCodePlugin: Plugin = async ({
           const sessionID = extractSessionId(event);
           if (sessionID) sessionState.delete(sessionID);
         }
-        await syncOfflineQueue(config, "opencode", log);
+        // Do not make OpenCode wait for Ziit when the server is unhealthy.
+        void syncOfflineQueue(config, "opencode", log).catch(() => undefined);
         pruneSessions(Date.now());
       }
     },

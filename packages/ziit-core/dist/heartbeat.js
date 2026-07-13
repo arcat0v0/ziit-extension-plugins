@@ -30,9 +30,9 @@ export function createHeartbeat(filePath, cwd, editorName) {
 }
 const FETCH_TIMEOUT_MS = 5000;
 async function postJson(url, apiKey, payload) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
         const response = await fetch(url, {
             method: "POST",
             headers: {
@@ -42,11 +42,13 @@ async function postJson(url, apiKey, payload) {
             body: JSON.stringify(payload),
             signal: controller.signal,
         });
-        clearTimeout(timeout);
         return response.ok;
     }
     catch {
         return false;
+    }
+    finally {
+        clearTimeout(timeout);
     }
 }
 /**
@@ -70,5 +72,7 @@ export function sendHeartbeat(config, payload, platformName) {
             await enqueueOffline(payload, platformName, logger);
             void logger(`Queued offline heartbeat for ${payload.file}`);
         }
-    })();
+    })().catch((error) => {
+        void logger(`Failed to process heartbeat for ${payload.file}: ${String(error)}`);
+    });
 }

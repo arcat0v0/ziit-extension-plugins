@@ -20,8 +20,13 @@ CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / 
 CONFIG_FILE = CONFIG_DIR / "config.json"
 LOG_FILE = CONFIG_DIR / "codex.log"
 OFFLINE_FILE = CONFIG_DIR / "offline_codex_heartbeats.json"
+OFFLINE_INFLIGHT_FILE = CONFIG_DIR / "offline_codex_heartbeats.inflight.json"
+OFFLINE_LOCK_DIR = CONFIG_DIR / "codex-offline-queue.lock"
 STATE_FILE = CONFIG_DIR / "codex_session_state.json"
 EDITOR_NAME = "Codex CLI"
+REQUEST_TIMEOUT_SECONDS = 5
+QUEUE_LOCK_WAIT_SECONDS = 1
+STALE_QUEUE_LOCK_SECONDS = 30
 MIN_SEND_INTERVAL_SECONDS = 45
 RECENT_FILE_WINDOW_SECONDS = 180
 MAX_FILES_PER_EVENT = 20
@@ -443,6 +448,69 @@ def save_offline_queue(queue: list[dict[str, Any]]) -> None:
     write_json_file(OFFLINE_FILE, queue)
 
 
+class OfflineQueueLock:
+    def __enter__(self) -> None:
+        ensure_dirs()
+        deadline = time.monotonic() + QUEUE_LOCK_WAIT_SECONDS
+        while True:
+            try:
+                OFFLINE_LOCK_DIR.mkdir()
+                return
+            except FileExistsError:
+                try:
+                    lock_age = time.time() - OFFLINE_LOCK_DIR.stat().st_mtime
+                    if lock_age > STALE_QUEUE_LOCK_SECONDS:
+                        OFFLINE_LOCK_DIR.rmdir()
+                        continue
+                except FileNotFoundError:
+                    continue
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("Timed out waiting for Codex offline queue lock")
+                time.sleep(0.01)
+
+    def __exit__(self, *_args: Any) -> None:
+        try:
+            OFFLINE_LOCK_DIR.rmdir()
+        except FileNotFoundError:
+            pass
+
+
+def enqueue_heartbeats(payloads: list[dict[str, Any]]) -> None:
+    if not payloads:
+        return
+    with OfflineQueueLock():
+        queue = load_offline_queue()
+        queue.extend(payloads)
+        save_offline_queue(queue)
+
+
+def claim_offline_queue() -> list[dict[str, Any]]:
+    with OfflineQueueLock():
+        if OFFLINE_INFLIGHT_FILE.exists():
+            try:
+                inflight_age = time.time() - OFFLINE_INFLIGHT_FILE.stat().st_mtime
+            except OSError:
+                return []
+            if inflight_age <= STALE_QUEUE_LOCK_SECONDS:
+                return []
+
+            # A previous uploader exited without resolving its request. Recover
+            # its durable in-flight batch before starting a new attempt.
+            stale = load_json_file(OFFLINE_INFLIGHT_FILE, [])
+            pending = load_offline_queue()
+            if isinstance(stale, list):
+                save_offline_queue(
+                    [item for item in stale if isinstance(item, dict)] + pending
+                )
+            OFFLINE_INFLIGHT_FILE.unlink(missing_ok=True)
+
+        queue = load_offline_queue()
+        if queue:
+            write_json_file(OFFLINE_INFLIGHT_FILE, queue)
+            save_offline_queue([])
+        return queue
+
+
 def send_request(url: str, api_key: str, payload: Any) -> bool:
     if os.environ.get("ZIIT_TEST_MODE") == "1":
         print(json.dumps(payload, ensure_ascii=False))
@@ -459,40 +527,72 @@ def send_request(url: str, api_key: str, payload: Any) -> bool:
         method="POST",
     )
     try:
-        with request.urlopen(req, timeout=15) as response:
+        with request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             return 200 <= response.status < 300
     except error.HTTPError as exc:
         log(f"HTTP error {exc.code} for {url}")
         return False
-    except error.URLError as exc:
-        log(f"Network error for {url}: {exc.reason}")
+    except (error.URLError, TimeoutError, OSError) as exc:
+        log(f"Network error for {url}: {getattr(exc, 'reason', exc)}")
         return False
 
 
 def sync_offline_queue(config: ZiitConfig) -> None:
-    queue = load_offline_queue()
+    queue = claim_offline_queue()
     if not queue:
         return
-    if send_request(f"{config.base_url}/api/external/batch", config.api_key, queue):
+    try:
+        sent = send_request(
+            f"{config.base_url}/api/external/batch", config.api_key, queue
+        )
+    except Exception as exc:
+        log(f"Unexpected error while syncing offline heartbeats: {exc}")
+        sent = False
+    if sent:
+        with OfflineQueueLock():
+            OFFLINE_INFLIGHT_FILE.unlink(missing_ok=True)
         log(f"Synced {len(queue)} offline heartbeats")
-        save_offline_queue([])
+        return
+
+    # New hook invocations may have queued more heartbeats while this detached
+    # worker was uploading. Put the failed batch back without overwriting them.
+    with OfflineQueueLock():
+        inflight = load_json_file(OFFLINE_INFLIGHT_FILE, queue)
+        pending = load_offline_queue()
+        failed = (
+            [item for item in inflight if isinstance(item, dict)]
+            if isinstance(inflight, list)
+            else queue
+        )
+        save_offline_queue([*failed, *pending])
+        OFFLINE_INFLIGHT_FILE.unlink(missing_ok=True)
 
 
 def send_heartbeats(config: ZiitConfig, payloads: list[dict[str, Any]]) -> None:
-    sync_offline_queue(config)
-    if not payloads:
-        return
-    queue = load_offline_queue()
-    for payload in payloads:
-        sent = send_request(
-            f"{config.base_url}/api/external/heartbeat", config.api_key, payload
+    enqueue_heartbeats(payloads)
+    start_flush_worker()
+
+
+def start_flush_worker() -> None:
+    command = [sys.executable, str(Path(__file__).resolve()), "--flush"]
+    kwargs: dict[str, Any] = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "close_fds": True,
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = (
+            subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
         )
-        if sent:
-            log(f"Heartbeat sent for {payload['file']}")
-        else:
-            queue.append(payload)
-            log(f"Queued offline heartbeat for {payload['file']}")
-    save_offline_queue(queue)
+    else:
+        kwargs["start_new_session"] = True
+    try:
+        subprocess.Popen(command, **kwargs)
+    except OSError as exc:
+        # The payload is already durable in the offline queue and will be
+        # retried by a later hook invocation.
+        log(f"Failed to start background Ziit uploader: {exc}")
 
 
 def collect_files(
@@ -521,6 +621,12 @@ def collect_files(
 
 def main() -> int:
     ensure_dirs()
+    if "--flush" in sys.argv:
+        config = load_config()
+        if config is not None:
+            sync_offline_queue(config)
+        return 0
+
     event = parse_event()
     if event is None:
         return 0
@@ -552,11 +658,20 @@ def main() -> int:
     save_state(state)
     if not payloads:
         if str(event.get("hook_event_name", "")) == "Stop":
-            sync_offline_queue(config)
+            start_flush_worker()
         log("All candidate files were rate-limited")
         return 0
 
-    send_heartbeats(config, payloads)
+    if os.environ.get("ZIIT_TEST_MODE") == "1":
+        print(json.dumps(payloads, ensure_ascii=False))
+        return 0
+
+    try:
+        send_heartbeats(config, payloads)
+    except Exception as exc:
+        # Tracking must never turn a successful Codex tool call into a hook
+        # failure. The queue lock is bounded, so this path also returns quickly.
+        log(f"Failed to queue Codex heartbeats: {exc}")
     return 0
 
 

@@ -9,9 +9,10 @@
   "scripts": {
     "build": "pnpm --filter './packages/*' --filter './plugins/*' build",
     "test:claude": "node plugins/ziit-claude-code/scripts/test-activity.mjs",
+    "test:codex": "python3 plugins/ziit-codex/scripts/test_activity.py",
     "publish:core": "pnpm --filter @arcat/ziit-core publish:npm",
     "publish:pi": "pnpm --filter @arcat/ziit-pi publish:npm",
     "publish:opencode": "pnpm --filter @arcat/ziit-opencode publish:npm",
-    "publish:all": "pnpm build && pnpm test:claude && pnpm publish:core && pnpm publish:pi"
+    "publish:all": "pnpm build && pnpm test:claude && pnpm test:codex && pnpm publish:core && pnpm publish:pi && pnpm publish:opencode"
   }
 }

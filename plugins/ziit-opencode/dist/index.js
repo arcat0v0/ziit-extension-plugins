@@ -1,7 +1,7 @@
 import { basename, isAbsolute, resolve } from "node:path";
 import { loadConfig, createHeartbeat, sendHeartbeat, syncOfflineQueue, createRateLimiter, createLogger, } from "@arcat/ziit-core";
 const EDITOR_NAME = "OpenCode";
-const MIN_SEND_INTERVAL_MS = 120_000; // 2 minutes — WakaTime standard
+const MIN_SEND_INTERVAL_MS = 120000; // 2 minutes — WakaTime standard
 const MAX_FILES_PER_EVENT = 20;
 const IGNORED_DIRS = new Set([
     ".git",
@@ -260,7 +260,8 @@ export const ZiitOpenCodePlugin = async ({ directory, }) => {
                     if (sessionID)
                         sessionState.delete(sessionID);
                 }
-                await syncOfflineQueue(config, "opencode", log);
+                // Do not make OpenCode wait for Ziit when the server is unhealthy.
+                void syncOfflineQueue(config, "opencode", log).catch(() => undefined);
                 pruneSessions(Date.now());
             }
         },

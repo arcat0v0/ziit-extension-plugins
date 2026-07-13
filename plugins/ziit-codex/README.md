@@ -53,6 +53,7 @@ Each heartbeat includes:
 
 - **Automatic tracking** through official Codex hooks
 - **Offline queue** when Ziit is unreachable
+- **Non-blocking uploads** so a slow or unavailable Ziit server never stalls Codex
 - **Git-aware project detection**
 - **Language detection** for common source files
 - **Rate limiting** to avoid flooding duplicate heartbeats for the same file

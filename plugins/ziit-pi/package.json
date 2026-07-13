@@ -1,6 +1,6 @@
 {
   "name": "@arcat/ziit-pi",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Ziit time tracking extension for Pi and Oh My Pi",
   "type": "module",
   "main": "dist/plugin.js",

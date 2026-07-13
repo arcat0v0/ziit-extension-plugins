@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "__ZIIT_CODEX_PLUGIN_ROOT__/scripts/track-activity.py",
-            "timeout": 15,
+            "timeout": 5,
             "statusMessage": "Recording Ziit activity"
           }
         ]
@@ -19,7 +19,7 @@
           {
             "type": "command",
             "command": "__ZIIT_CODEX_PLUGIN_ROOT__/scripts/track-activity.py",
-            "timeout": 15
+            "timeout": 5
           }
         ]
       }

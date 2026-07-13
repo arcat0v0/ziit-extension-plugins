@@ -71,7 +71,11 @@ export function createZiitExtension(
       void createLogger(platformName)("Config not found; heartbeats disabled");
       return;
     }
-    void syncOfflineQueue(config, platformName, createLogger(platformName));
+    void syncOfflineQueue(
+      config,
+      platformName,
+      createLogger(platformName),
+    ).catch(() => undefined);
   });
 
   pi.on("session_shutdown", async () => {
@@ -79,7 +83,11 @@ export function createZiitExtension(
     toolCallTimers.clear();
     toolCallPaths.clear();
     if (!config) return;
-    void syncOfflineQueue(config, platformName, createLogger(platformName));
+    void syncOfflineQueue(
+      config,
+      platformName,
+      createLogger(platformName),
+    ).catch(() => undefined);
   });
 
   pi.on("tool_call", async (event) => {

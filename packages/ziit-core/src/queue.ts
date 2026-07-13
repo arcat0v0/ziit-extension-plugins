@@ -5,6 +5,7 @@ import type { ZiitConfig } from "./config.js";
 import type { HeartbeatPayload } from "./heartbeat.js";
 
 const OFFLINE_DIR = resolve(homedir(), ".config", "ziit");
+const FETCH_TIMEOUT_MS = 5_000;
 
 function getOfflineFile(platform: string): string {
   return resolve(OFFLINE_DIR, `offline_${platform}_heartbeats.json`);
@@ -83,6 +84,8 @@ async function postJson(
   apiKey: string,
   payload: unknown,
 ): Promise<boolean> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const response = await fetch(url, {
       method: "POST",
@@ -91,10 +94,13 @@ async function postJson(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
     return response.ok;
   } catch {
     return false;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
