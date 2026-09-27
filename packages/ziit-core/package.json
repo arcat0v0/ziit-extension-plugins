@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "publish:npm": "pnpm publish --registry https://registry.npmjs.org/ --access public --no-git-checks"
+    "publish:npm": "pnpm publish --registry https://registry.npmjs.org/ --access public --no-git-checks",
+    "test": "node --test test/core.test.mjs"
   },
   "license": "MIT",
   "devDependencies": {

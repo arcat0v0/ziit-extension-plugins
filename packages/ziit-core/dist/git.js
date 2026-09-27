@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { basename } from "node:path";
+const GIT_TIMEOUT_MS = 1000;
 /**
  * Run a git command in the given working directory.
  * Returns the trimmed stdout or empty string on failure.
@@ -9,6 +10,7 @@ function runGit(cwd, args) {
         const output = execFileSync("git", ["-C", cwd, ...args], {
             encoding: "utf-8",
             stdio: ["ignore", "pipe", "ignore"],
+            timeout: GIT_TIMEOUT_MS,
         });
         return output.trim();
     }

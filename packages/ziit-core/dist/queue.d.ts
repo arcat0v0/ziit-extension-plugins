@@ -11,6 +11,6 @@ export declare function loadOfflineQueue(platform: string): Promise<HeartbeatPay
 export declare function enqueueOffline(payload: HeartbeatPayload, platform: string, logger: (msg: string) => void | Promise<void>): Promise<void>;
 /**
  * Sync all queued offline heartbeats to the Ziit batch endpoint.
- * Clears the queue file on successful sync; retains on failure.
+ * Uploads in chunks; retains only the unsent remainder on failure.
  */
 export declare function syncOfflineQueue(config: ZiitConfig, platform: string, logger: (msg: string) => void | Promise<void>): Promise<void>;

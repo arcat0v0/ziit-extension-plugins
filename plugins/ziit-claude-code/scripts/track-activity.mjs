@@ -14,6 +14,10 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 const FETCH_TIMEOUT_MS = 5_000;
 const MAX_SESSIONS = 100;
 const STALE_LOCK_MS = 30_000;
+const GIT_TIMEOUT_MS = 1_000;
+const MAX_HEARTBEAT_FIELD_LENGTH = 255;
+const MAX_QUEUE_ENTRIES = 5_000;
+const UPLOAD_CHUNK_SIZE = 500;
 
 const LANGUAGE_BY_EXTENSION = new Map([
   [".ts", "typescript"], [".tsx", "typescript"], [".js", "javascript"],
@@ -90,7 +94,7 @@ function detectOs() {
 
 function runGit(cwd, args) {
   try {
-    return execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: GIT_TIMEOUT_MS }).trim();
   } catch {
     return "";
   }
@@ -241,27 +245,47 @@ async function postJson(url, apiKey, payload) {
   }
 }
 
-async function enqueue(payloads) {
-  if (payloads.length === 0) return;
+function isValidHeartbeat(payload) {
+  return (
+    typeof payload?.file === "string" &&
+    payload.file.length > 0 &&
+    payload.file.length <= MAX_HEARTBEAT_FIELD_LENGTH &&
+    !payload.file.includes("\0") &&
+    Object.values(payload).every((value) => value !== null)
+  );
+}
+
+export async function enqueue(payloads) {
+  const valid = payloads.filter(isValidHeartbeat);
+  if (valid.length < payloads.length) await log(`Dropped ${payloads.length - valid.length} invalid heartbeat(s)`);
+  if (valid.length === 0) return;
   await withLock(async () => {
     const offline = await readJson(OFFLINE_FILE, []);
-    await writeJson(OFFLINE_FILE, [...offline, ...payloads]);
+    await writeJson(OFFLINE_FILE, [...offline, ...valid].slice(-MAX_QUEUE_ENTRIES));
   });
 }
 
-async function flush(config) {
+export async function flush(config) {
   const pending = await withLock(async () => {
     const offline = await readJson(OFFLINE_FILE, []);
     if (offline.length > 0) await writeJson(OFFLINE_FILE, []);
     return offline;
   });
   if (pending.length === 0) return;
-  const sent = await postJson(
-    `${config.baseUrl}/api/external/batch`,
-    config.apiKey,
-    pending,
-  );
-  if (!sent) await enqueue(pending);
+  const queue = pending.filter(isValidHeartbeat);
+  if (queue.length < pending.length) await log(`Dropped ${pending.length - queue.length} invalid queued heartbeat(s)`);
+  let sentCount = 0;
+  while (sentCount < queue.length) {
+    const chunk = queue.slice(sentCount, sentCount + UPLOAD_CHUNK_SIZE);
+    const sent = await postJson(
+      `${config.baseUrl}/api/external/batch`,
+      config.apiKey,
+      chunk,
+    );
+    if (!sent) break;
+    sentCount += chunk.length;
+  }
+  if (sentCount < queue.length) await enqueue(queue.slice(sentCount));
 }
 
 async function loadConfig() {

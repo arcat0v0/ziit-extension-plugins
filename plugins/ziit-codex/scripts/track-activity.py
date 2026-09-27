@@ -30,6 +30,11 @@ STALE_QUEUE_LOCK_SECONDS = 30
 MIN_SEND_INTERVAL_SECONDS = 45
 RECENT_FILE_WINDOW_SECONDS = 180
 MAX_FILES_PER_EVENT = 20
+GIT_TIMEOUT_SECONDS = 1
+WALK_BUDGET_SECONDS = 1.5
+MAX_HEARTBEAT_FIELD_LENGTH = 255
+MAX_QUEUE_ENTRIES = 5000
+UPLOAD_CHUNK_SIZE = 500
 IGNORED_DIRS = {
     ".git",
     ".hg",
@@ -179,8 +184,9 @@ def run_git(cwd: Path, args: list[str]) -> str:
             capture_output=True,
             text=True,
             check=False,
+            timeout=GIT_TIMEOUT_SECONDS,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return ""
     if result.returncode != 0:
         return ""
@@ -384,10 +390,16 @@ def recent_changed_files(cwd: Path, window_seconds: int) -> list[Path]:
     if git_candidates:
         return git_candidates[:MAX_FILES_PER_EVENT]
 
+    deadline = time.monotonic() + WALK_BUDGET_SECONDS
     candidates: list[tuple[float, Path]] = []
     for root, dirs, files in os.walk(cwd):
+        if time.monotonic() >= deadline:
+            log(f"Stopped scanning {cwd} early: walk budget exhausted")
+            break
         dirs[:] = [directory for directory in dirs if directory not in IGNORED_DIRS]
         for name in files:
+            if time.monotonic() >= deadline:
+                break
             path = Path(root) / name
             try:
                 modified_at = path.stat().st_mtime
@@ -422,11 +434,12 @@ def recent_git_files(cwd: Path, now: float, window_seconds: int) -> list[Path]:
     return unique_paths([path for _, path in candidates])
 
 
-def heartbeat_payload(file_path: Path, cwd: Path) -> dict[str, Any]:
-    branch = detect_branch(cwd)
+def heartbeat_payload(
+    file_path: Path, cwd: Path, project: str, branch: str
+) -> dict[str, Any]:
     payload = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
-        "project": detect_project(cwd),
+        "project": project,
         "language": detect_language(file_path),
         "editor": EDITOR_NAME,
         "os": detect_os(),
@@ -475,12 +488,31 @@ class OfflineQueueLock:
             pass
 
 
+def is_valid_heartbeat(payload: dict[str, Any]) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    if any(value is None for value in payload.values()):
+        return False
+    file_value = payload.get("file")
+    if not isinstance(file_value, str) or not file_value:
+        return False
+    if len(file_value) > MAX_HEARTBEAT_FIELD_LENGTH or "\x00" in file_value:
+        return False
+    return True
+
+
 def enqueue_heartbeats(payloads: list[dict[str, Any]]) -> None:
-    if not payloads:
+    valid = [payload for payload in payloads if is_valid_heartbeat(payload)]
+    dropped = len(payloads) - len(valid)
+    if dropped:
+        log(f"Dropped {dropped} invalid Codex heartbeat(s)")
+    if not valid:
         return
     with OfflineQueueLock():
         queue = load_offline_queue()
-        queue.extend(payloads)
+        queue.extend(valid)
+        if len(queue) > MAX_QUEUE_ENTRIES:
+            queue = queue[-MAX_QUEUE_ENTRIES:]
         save_offline_queue(queue)
 
 
@@ -538,33 +570,46 @@ def send_request(url: str, api_key: str, payload: Any) -> bool:
 
 
 def sync_offline_queue(config: ZiitConfig) -> None:
-    queue = claim_offline_queue()
+    claimed = claim_offline_queue()
+    queue = [payload for payload in claimed if is_valid_heartbeat(payload)]
+    if len(queue) < len(claimed):
+        log(f"Dropped {len(claimed) - len(queue)} invalid queued heartbeat(s)")
+        with OfflineQueueLock():
+            if OFFLINE_INFLIGHT_FILE.exists():
+                write_json_file(OFFLINE_INFLIGHT_FILE, queue)
     if not queue:
+        with OfflineQueueLock():
+            OFFLINE_INFLIGHT_FILE.unlink(missing_ok=True)
         return
+    sent_count = 0
     try:
-        sent = send_request(
-            f"{config.base_url}/api/external/batch", config.api_key, queue
-        )
+        while sent_count < len(queue):
+            chunk = queue[sent_count : sent_count + UPLOAD_CHUNK_SIZE]
+            if not send_request(
+                f"{config.base_url}/api/external/batch", config.api_key, chunk
+            ):
+                break
+            sent_count += len(chunk)
     except Exception as exc:
         log(f"Unexpected error while syncing offline heartbeats: {exc}")
-        sent = False
-    if sent:
+    if sent_count == len(queue):
         with OfflineQueueLock():
             OFFLINE_INFLIGHT_FILE.unlink(missing_ok=True)
         log(f"Synced {len(queue)} offline heartbeats")
         return
 
     # New hook invocations may have queued more heartbeats while this detached
-    # worker was uploading. Put the failed batch back without overwriting them.
+    # worker was uploading. Put the unsent remainder back without overwriting
+    # them.
     with OfflineQueueLock():
         inflight = load_json_file(OFFLINE_INFLIGHT_FILE, queue)
         pending = load_offline_queue()
-        failed = (
+        unsent = (
             [item for item in inflight if isinstance(item, dict)]
             if isinstance(inflight, list)
             else queue
-        )
-        save_offline_queue([*failed, *pending])
+        )[sent_count:]
+        save_offline_queue([*unsent, *pending])
         OFFLINE_INFLIGHT_FILE.unlink(missing_ok=True)
 
 
@@ -650,10 +695,12 @@ def main() -> int:
         return 0
 
     update_session_state(state, session_id, files, now)
+    project = detect_project(cwd)
+    branch = detect_branch(cwd)
     payloads: list[dict[str, Any]] = []
     for file_path in files:
         if should_send(state, session_id, file_path, now):
-            payloads.append(heartbeat_payload(file_path, cwd))
+            payloads.append(heartbeat_payload(file_path, cwd, project, branch))
 
     save_state(state)
     if not payloads:

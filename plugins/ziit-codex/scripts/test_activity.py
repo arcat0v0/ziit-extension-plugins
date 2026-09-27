@@ -184,6 +184,130 @@ class CodexTrackerTests(unittest.TestCase):
             )
             self.assertEqual(tracker.claim_offline_queue(), [payload])
 
+    def test_run_git_returns_empty_when_git_times_out(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            tracker = load_tracker(Path(temp) / "config")
+
+            with mock.patch.object(
+                tracker.subprocess,
+                "run",
+                side_effect=tracker.subprocess.TimeoutExpired(cmd="git", timeout=1),
+            ):
+                self.assertEqual(tracker.run_git(Path(temp), ["status"]), "")
+
+    def test_walk_fallback_finds_recent_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            tracker = load_tracker(root / "config")
+            source_file = root / "example.py"
+            source_file.write_text("print('hello')\n", encoding="utf-8")
+
+            files = tracker.recent_changed_files(root, tracker.RECENT_FILE_WINDOW_SECONDS)
+
+            self.assertIn(source_file.resolve(), files)
+
+    def test_walk_fallback_stops_when_budget_exhausted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            tracker = load_tracker(root / "config")
+            source_file = root / "example.py"
+            source_file.write_text("print('hello')\n", encoding="utf-8")
+
+            with mock.patch.object(tracker, "WALK_BUDGET_SECONDS", 0):
+                files = tracker.recent_changed_files(
+                    root, tracker.RECENT_FILE_WINDOW_SECONDS
+                )
+
+            self.assertEqual(files, [])
+
+    def test_enqueue_drops_invalid_payloads(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            tracker = load_tracker(Path(temp) / "config")
+            valid = {"file": "/tmp/example.py"}
+            too_long = {"file": "/tmp/" + "a" * 300 + ".py"}
+            empty_file = {"file": ""}
+            missing_file = {"project": "demo"}
+            null_branch = {"file": "/tmp/legacy.py", "branch": None}
+
+            tracker.enqueue_heartbeats(
+                [valid, too_long, empty_file, missing_file, null_branch]
+            )
+
+            self.assertEqual(tracker.load_offline_queue(), [valid])
+
+    def test_enqueue_caps_queue_length(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            tracker = load_tracker(Path(temp) / "config")
+            payloads = [{"file": f"/tmp/example-{index}.py"} for index in range(10)]
+
+            with mock.patch.object(tracker, "MAX_QUEUE_ENTRIES", 5):
+                tracker.enqueue_heartbeats(payloads)
+
+            self.assertEqual(tracker.load_offline_queue(), payloads[-5:])
+
+    def test_heartbeat_payload_uses_supplied_project_and_branch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            tracker = load_tracker(root / "config")
+            source_file = root / "example.py"
+            source_file.write_text("print('hello')\n", encoding="utf-8")
+
+            with mock.patch.object(
+                tracker,
+                "run_git",
+                side_effect=AssertionError("payload building must not shell out"),
+            ):
+                payload = tracker.heartbeat_payload(
+                    source_file, root, "demo-project", "main"
+                )
+
+            self.assertEqual(payload["project"], "demo-project")
+            self.assertEqual(payload["branch"], "main")
+            self.assertEqual(payload["file"], str(source_file))
+
+    def test_sync_uploads_queue_in_chunks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            tracker = load_tracker(Path(temp) / "config")
+            payloads = [
+                {"file": f"/tmp/example-{index}.py"} for index in range(1200)
+            ]
+            tracker.enqueue_heartbeats(payloads)
+            config = tracker.ZiitConfig("test-key", "http://127.0.0.1:1")
+            sent_sizes: list[int] = []
+
+            def fake_send(_url: str, _key: str, batch: list) -> bool:
+                sent_sizes.append(len(batch))
+                return True
+
+            with mock.patch.object(tracker, "send_request", side_effect=fake_send):
+                tracker.sync_offline_queue(config)
+
+            self.assertEqual(sent_sizes, [500, 500, 200])
+            self.assertEqual(tracker.load_offline_queue(), [])
+            self.assertFalse(tracker.OFFLINE_INFLIGHT_FILE.exists())
+
+    def test_sync_restores_unsent_chunks_after_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            tracker = load_tracker(Path(temp) / "config")
+            payloads = [
+                {"file": f"/tmp/example-{index}.py"} for index in range(1200)
+            ]
+            tracker.enqueue_heartbeats(payloads)
+            config = tracker.ZiitConfig("test-key", "http://127.0.0.1:1")
+            calls = 0
+
+            def flaky_send(_url: str, _key: str, batch: list) -> bool:
+                nonlocal calls
+                calls += 1
+                return calls <= 1
+
+            with mock.patch.object(tracker, "send_request", side_effect=flaky_send):
+                tracker.sync_offline_queue(config)
+
+            self.assertEqual(tracker.load_offline_queue(), payloads[500:])
+            self.assertFalse(tracker.OFFLINE_INFLIGHT_FILE.exists())
+
+
 
 if __name__ == "__main__":
     unittest.main()

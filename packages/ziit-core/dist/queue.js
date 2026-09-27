@@ -3,6 +3,9 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 const OFFLINE_DIR = resolve(homedir(), ".config", "ziit");
 const FETCH_TIMEOUT_MS = 5000;
+const MAX_HEARTBEAT_FIELD_LENGTH = 255;
+const MAX_QUEUE_ENTRIES = 5000;
+const UPLOAD_CHUNK_SIZE = 500;
 function getOfflineFile(platform) {
     return resolve(OFFLINE_DIR, `offline_${platform}_heartbeats.json`);
 }
@@ -84,25 +87,39 @@ async function postJson(url, apiKey, payload) {
  * Append a single heartbeat to the offline queue file.
  */
 export async function enqueueOffline(payload, platform, logger) {
+    if (payload.file.length === 0 ||
+        payload.file.length > MAX_HEARTBEAT_FIELD_LENGTH ||
+        payload.file.includes("\0")) {
+        await logger(`Dropped invalid heartbeat for ${payload.file.slice(0, 64)} (length: ${payload.file.length})`);
+        return;
+    }
     const queue = await loadOfflineQueue(platform);
     queue.push(payload);
-    await saveOfflineQueue(platform, queue);
-    await logger(`Enqueued offline heartbeat for ${payload.file} (queue size: ${queue.length})`);
+    await saveOfflineQueue(platform, queue.slice(-MAX_QUEUE_ENTRIES));
+    await logger(`Enqueued offline heartbeat for ${payload.file} (queue size: ${Math.min(queue.length, MAX_QUEUE_ENTRIES)})`);
 }
 /**
  * Sync all queued offline heartbeats to the Ziit batch endpoint.
- * Clears the queue file on successful sync; retains on failure.
+ * Uploads in chunks; retains only the unsent remainder on failure.
  */
 export async function syncOfflineQueue(config, platform, logger) {
     const queue = await loadOfflineQueue(platform);
     if (queue.length === 0)
         return;
-    const ok = await postJson(`${config.baseUrl}/api/external/batch`, config.apiKey, queue);
-    if (ok) {
+    let sentCount = 0;
+    while (sentCount < queue.length) {
+        const chunk = queue.slice(sentCount, sentCount + UPLOAD_CHUNK_SIZE);
+        const ok = await postJson(`${config.baseUrl}/api/external/batch`, config.apiKey, chunk);
+        if (!ok)
+            break;
+        sentCount += chunk.length;
+    }
+    if (sentCount === queue.length) {
         await saveOfflineQueue(platform, []);
         await logger(`Synced ${queue.length} offline heartbeats`);
     }
     else {
-        await logger(`Failed to sync ${queue.length} offline heartbeats`);
+        await saveOfflineQueue(platform, queue.slice(sentCount));
+        await logger(`Failed to sync ${queue.length - sentCount} offline heartbeats`);
     }
 }
