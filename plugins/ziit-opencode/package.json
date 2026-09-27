@@ -1,6 +1,6 @@
 {
   "name": "@arcat/ziit-opencode",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Ziit time tracking plugin for OpenCode",
   "type": "module",
   "main": "dist/plugin.js",
